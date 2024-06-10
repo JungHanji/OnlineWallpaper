@@ -1,0 +1,4 @@
+dearpygui==1.11.1
+pillow==10.3.0
+requests==2.32.3
+urllib3==2.2.1
