@@ -11,18 +11,25 @@ def registrate_image(image: wpm.Image, tag: int = 0):
     if not all(isinstance(i, float) for i in data):
         data = [float(i) for i in data]
     
-    # Normalize data if necessary
-    max_value = max(data)
-    if max_value > 1.0:
-        data = [i / max_value for i in data]
+    data = [i / 255 for i in data]
 
     with dpg.texture_registry():
         dpg.add_raw_texture(
             width=image.resolution[0],
             height=image.resolution[1],
             default_value=data,
-            tag=tag,
+            tag=f"prev{tag}",
             format=dpg.mvFormat_Float_rgb
+        )
+
+def registrate_image_file(tag: str, index: int):
+    width, height, channels, data = dpg.load_image(f"./assets/wallpapers/preview{index}.jpg")
+    with dpg.texture_registry():
+        dpg.add_static_texture(
+            default_value=data,
+            width=width,
+            height=height,
+            tag=tag
         )
 
 def img_callback(sender, keyword, user_data):
@@ -44,8 +51,9 @@ if __name__ == '__main__':
     print("registration...")
 
     for tp in regimgs:
-        print(f"-> {tp[1]+1}/{len(regimgs)} registration: {tp[0].prev_url}")
+        print(f"-> {tp[1]+1}/{len(regimgs)} registration: {tp[0].prev_url}\n\ttag: prev{tp[1]}  index: {tp[1]}")
         registrate_image(tp[0], tp[1])
+        # registrate_image_file(f'prev{tp[1]}', tp[1])
 
     print("registrated...")
 
@@ -62,13 +70,14 @@ if __name__ == '__main__':
                 with dpg.table_row():
                     for j in range(0, columns):
                         img = regimgs[index][0]
-                        index += 1
+                        print(f"adding image with tag: prev{regimgs[index][1]}, index: {index}")
                         dpg.add_image_button(
-                            texture_tag = index,
+                            texture_tag = f'prev{regimgs[index][1]}',
                             label = ', '.join(img.tags),
                             callback = img_callback,
                             user_data = img
                         )
+                        index += 1
 
     dpg.create_viewport(
         title='Online wallpapers', 
