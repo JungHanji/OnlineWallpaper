@@ -23,8 +23,8 @@ class Image:
         else:
             raise Exception(f"Failed to download image from {url}")
     
-    def data(self, type: str = 'main') -> list[float]:
-        data: list[float] = []
+    def data(self, type: str = 'main') -> list[tuple[int, int, int, int]]:
+        data: list[tuple[int, int, int, int]] = []
         
         url = self.main_url if type == 'main' else self.prev_url
         response = get(url)
