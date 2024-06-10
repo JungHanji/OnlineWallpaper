@@ -17,11 +17,12 @@ def registrate_image(image: wpm.Image, tag: int = 0):
         data = [i / max_value for i in data]
 
     with dpg.texture_registry():
-        dpg.add_static_texture(
+        dpg.add_raw_texture(
             width=image.resolution[0],
             height=image.resolution[1],
             default_value=data,
-            tag=tag
+            tag=tag,
+            format=dpg.mvFormat_Float_rgb
         )
 
 def img_callback(sender, keyword, user_data):
