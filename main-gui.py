@@ -3,23 +3,14 @@ import src.downloader.msite as wpm
 
 def registrate_image(image: wpm.Image, tag: int = 0):
     data = image.data("preview")
+    data = [float(item) / 255 for sublist in data for item in sublist]
     
-    # Flatten the list of tuples
-    data = [item for sublist in data for item in sublist]
-    
-    # Ensure data is a list of floats
-    if not all(isinstance(i, float) for i in data):
-        data = [float(i) for i in data]
-    
-    data = [i / 255 for i in data]
-
     with dpg.texture_registry():
-        dpg.add_raw_texture(
-            width=image.resolution[0],
-            height=image.resolution[1],
+        dpg.add_static_texture(
+            width=image.preview_resolution[0],
+            height=image.preview_resolution[1],
             default_value=data,
-            tag=f"prev{tag}",
-            format=dpg.mvFormat_Float_rgb
+            tag=f"prev{tag}"
         )
 
 def registrate_image_file(tag: str, index: int):
@@ -48,14 +39,8 @@ if __name__ == '__main__':
 
     dpg.create_context()
 
-    print("registration...")
-
     for tp in regimgs:
-        print(f"-> {tp[1]+1}/{len(regimgs)} registration: {tp[0].prev_url}\n\ttag: prev{tp[1]}  index: {tp[1]}")
         registrate_image(tp[0], tp[1])
-        # registrate_image_file(f'prev{tp[1]}', tp[1])
-
-    print("registrated...")
 
     with dpg.window(tag="Primary Window"):
         dpg.add_input_text(hint = "Enter search text", tag="search")
@@ -71,6 +56,7 @@ if __name__ == '__main__':
                     for j in range(0, columns):
                         img = regimgs[index][0]
                         print(f"adding image with tag: prev{regimgs[index][1]}, index: {index}")
+                        # dpg.add_image(texture_tag = f'prev{regimgs[index][1]}', label = ', '.join(img.tags))
                         dpg.add_image_button(
                             texture_tag = f'prev{regimgs[index][1]}',
                             label = ', '.join(img.tags),

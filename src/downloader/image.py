@@ -4,11 +4,12 @@ from typing import cast, List
 import io
 
 class Image:
-    def __init__(self, tags: list[str], prev_url: str, main_url: str, resolution: tuple[int, int]):
+    def __init__(self, tags: list[str], prev_url: str, main_url: str, resolution: tuple[int, int], preview_resolution: tuple[int, int]):
         self.tags = tags
         self.prev_url = prev_url
         self.main_url = main_url
         self.resolution = resolution
+        self.preview_resolution = preview_resolution
     
     def __str__(self) -> str:
         return f"Image, with tags {", ".join(self.tags)}:\n\tpreview url: {self.prev_url}\n\tmain url: {self.main_url}"
@@ -30,7 +31,7 @@ class Image:
         if response.status_code == 200:
             image = PILImage.open(io.BytesIO(response.content))
             image.convert("RGB")
-            data = image.getdata()
+            data = [(i[0], i[1], i[2], 255) for i in list(image.getdata())]
         else:
             raise Exception(f"Failed to download image from {url}")
 

@@ -26,7 +26,7 @@ class Page:
             return self.images
         
         data = request("GET", self.url).text
-        out: list[tuple[list[str], str, str, tuple[int, int]]] = []
+        out: list[tuple[list[str], str, str, tuple[int, int], tuple[int, int]]] = []
         ref: str = ""
 
         for line in data.splitlines():
@@ -56,9 +56,13 @@ class Page:
                 ]
 
                 resolution: tuple[int, int] = (0, 0)
+                presolution: tuple[int, int] = (0, 0)
 
                 ref = ref[ref.index('/', 1)+1:]
                 nref = ref.replace('/', '_')
+                
+                res = prev_ref[prev_ref.rindex('_')+1:prev_ref.rindex('.')]
+                presolution = (int(res[:res.index('x')]), int(res[res.index('x')+1:]))
 
                 if ref == nref:
                     nref += f"_{self.defaultResolution}"
@@ -67,8 +71,8 @@ class Page:
                     res = ref.split('/')[-1]
                     resolution = (int(res[:res.index('x')]), int(res[res.index('x')+1:]))
 
-                out.append((tags[:-1].split(','), prev_ref, self.settings["download-url"]+nref+'.jpg', resolution))
-        self.images: list[Image] = [Image(i[0], i[1], i[2], i[3]) for i in out]
+                out.append((tags.split(','), prev_ref, self.settings["download-url"]+nref+'.jpg', resolution, presolution))
+        self.images: list[Image] = [Image(i[0], i[1], i[2], i[3], i[4]) for i in out]
         
         self.isImagesLoaded = True
         self.prevUrl = self.url
