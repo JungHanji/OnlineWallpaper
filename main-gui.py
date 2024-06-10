@@ -2,15 +2,26 @@ import dearpygui.dearpygui as dpg
 import src.downloader.msite as wpm
 
 def registrate_image(image: wpm.Image, tag: int = 0):
-    data: list[float] = image.data()
+    data = image.data("preview")
+    
+    # Flatten the list of tuples
+    data = [item for sublist in data for item in sublist]
+    
+    # Ensure data is a list of floats
+    if not all(isinstance(i, float) for i in data):
+        data = [float(i) for i in data]
+    
+    # Normalize data if necessary
+    max_value = max(data)
+    if max_value > 1.0:
+        data = [i / max_value for i in data]
 
     with dpg.texture_registry():
         dpg.add_static_texture(
             width=image.resolution[0],
             height=image.resolution[1],
             default_value=data,
-            tag = tag#,
-            #format=dpg.mvFormat_Float_rgb
+            tag=tag
         )
 
 def img_callback(sender, keyword, user_data):
@@ -32,6 +43,7 @@ if __name__ == '__main__':
     print("registration...")
 
     for tp in regimgs:
+        print(f"-> {tp[1]+1}/{len(regimgs)} registration: {tp[0].prev_url}")
         registrate_image(tp[0], tp[1])
 
     print("registrated...")
