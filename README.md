@@ -11,4 +11,4 @@ To search the URLs of wallpapers
 ```
 python main-gui.py
 ```
-To run GUI version (not ready yet)
+To run GUI version
