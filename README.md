@@ -18,4 +18,4 @@ To run GUI version
 
 ### Attention! 
 ---
-This project only works on Linux. By default, it is designed for hyprland (hyprpaper), but in the settings section (in the application itself) you can set commands to set the wallpaper
+This project only works on Linux. By default, it is designed for hyprpaper, but in the settings section (in the application itself) you can set commands to set the wallpaper
