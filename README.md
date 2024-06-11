@@ -15,3 +15,7 @@ To search the URLs of wallpapers
 python main-gui.py
 ```
 To run GUI version
+
+### Attention! 
+---
+This project only works on Linux. By default, it is designed for hyprland (hyprpaper), but in the settings section (in the application itself) you can set commands to set the wallpaper
