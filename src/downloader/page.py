@@ -1,5 +1,6 @@
 from src.downloader.utils import *
 from src.downloader.image import *
+from colorama import Fore
 
 class Page:
     def __init__(self, url: str, settings: dict) -> None:
@@ -11,6 +12,28 @@ class Page:
         self.prevUrl: str = "none"
 
         self.defaultResolution = self.settings["default-resolution"]
+
+    def getMaxPagesCurrCat(self) -> int:
+        out: int = 1
+
+        data = self.getHTMLdata()
+        
+        for line in data.splitlines():
+            if 'Последняя<span class="gui-hidden-mobile"> страница</span></a>' in line:
+                if 'page=' in line:
+                    dat = line[line.index("href"):]
+                    out = int(dat[
+                        smartindex(dat, 'page='):
+                        dat.index('&', smartindex(dat, 'page='))
+                    ])
+                else:
+                    dat = line[line.index("href"):]
+                    out = int(dat[
+                        smartindex(dat, 'page'):
+                        smartindex(dat, '">', smartindex(dat, 'page')) - 2
+                    ])
+
+        return out
 
     def setCategory(self, category: str) -> None:
         if category != "all":
@@ -25,7 +48,16 @@ class Page:
         if self.prevUrl == self.url and self.isImagesLoaded:
             return self.images
         
-        data = request("GET", self.url).text
+        data = ""
+        while True:
+            try:
+                data = request("GET", self.url).text
+                break
+            except KeyboardInterrupt:
+                break
+            except:
+                print(f"{Fore.RED}[ERROR] Connection error while loading images from page ({self.url})... trying again... {Fore.RESET} (Ctrl + C to exit)")
+
         out: list[tuple[list[str], str, str, tuple[int, int], tuple[int, int]]] = []
         ref: str = ""
 

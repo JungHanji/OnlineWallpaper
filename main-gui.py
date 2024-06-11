@@ -1,12 +1,21 @@
+from colorama import init, Fore
 from random import randint
 import src.downloader.msite as wpm
 import dearpygui.dearpygui as dpg
 import json
 import os
-
+init()
 
 def registrate_image(image: wpm.Image, tag: int = 0):
-    data = image.data("preview")
+    while True:
+        try:
+            data = image.data("preview")
+            break
+        except KeyboardInterrupt:
+            break
+        except:
+            print(f"{Fore.RED}[ERROR] Connection error while trying to fetch an image ({image.prev_url})... trting again...{Fore.RESET} (Ctrl + C to stop)")
+    
     data = [float(item) / 255 for sublist in data for item in sublist]
     
     with dpg.texture_registry():
@@ -28,9 +37,9 @@ def registrate_image_file(tag: str, index: int):
         )
 
 def setwallpaper_callback(sender, keyword, user_data: tuple[wpm.Image, int]):
+    print(f"{Fore.BLUE}[WALLPAPER INFO] Setting wallpaper {Fore.RESET}")
     config = json.load(open(f"{os.environ.get('HOME')}/.config/onlineWallpaper/config.json"))
     name = user_data[0].save(f"{config["wallpaperDir"]}/{user_data[0].main_url[user_data[0].main_url.rindex('/')+1:]}")
-    print("name: " + name)
 
     with open(config["configPath"], "w") as conf:
         data: str = config["config"]
@@ -38,7 +47,7 @@ def setwallpaper_callback(sender, keyword, user_data: tuple[wpm.Image, int]):
         data = data.replace("{wallpaperFile}", name)
         conf.write(data)
 
-    print(f"Setted {name} as main wallpaper in config...")
+    print(f"{Fore.BLUE}[WALLPAPER INFO] Setted {name} as main wallpaper in config {Fore.RESET}")
 
     commands: str = config["permanentSet"]
     for line in commands.splitlines():
@@ -46,7 +55,7 @@ def setwallpaper_callback(sender, keyword, user_data: tuple[wpm.Image, int]):
         data = data.replace("{wallpaperFile}", name)
         os.system(data)
     
-    print(f"Setted {name} as main wallpaper at monitors...")
+    print(f"{Fore.BLUE}[WALLPAPER INFO] Setted {name} as main wallpaper at monitors {Fore.RESET}")
 
 def img_callback(sender, keyword, user_data: tuple[wpm.Image, int]):
     with dpg.window(label = "Wallpaper view", width=500, height=300):
@@ -74,11 +83,13 @@ def settings_callback(sender):
     data = {}
     
     def setall():
+        print(f"{Fore.LIGHTGREEN_EX}[INFO] Writing info to config file {Fore.RESET}")
         with open(f"{os.environ.get('HOME')}/.config/onlineWallpaper/config.json", 'w') as file:
             json.dump(data, file)
         
     with dpg.window(label="Settings", width=500, height=300, on_close = setall):
         if not os.path.exists(f"{os.environ.get('HOME')}/.config/onlineWallpaper/config.json"):
+            print(f"{Fore.LIGHTGREEN_EX}[INFO] Config file is not found - generating new one {Fore.RESET}")
             os.makedirs(f"{os.environ.get('HOME')}/.config/onlineWallpaper", exist_ok=True)
 
             config = dpg.add_input_text(
@@ -110,6 +121,7 @@ def settings_callback(sender):
                 "permanentSet": dpg.get_value(permanentSet)
             }
         else:
+            print(f"{Fore.LIGHTGREEN_EX}[INFO] Config file is found. Setting settings to file's values  {Fore.RESET}")
             data = json.load(open(f"{os.environ.get('HOME')}/.config/onlineWallpaper/config.json"))
 
             config = dpg.add_input_text(
@@ -150,18 +162,55 @@ def load_font():
                 biglet += 1  # choose next letter
             dpg.bind_font(default_font)
 
-def search_callback(sender, keyword, user_data):
-    page = site.getPageBySearch(dpg.get_value('search'), mainResolution)
-    imgs: list[wpm.Image] = page.loadImages()
-    regimgs = registrate_images(imgs)
+def search_callback(sender, keyword, user_data: (None | int), is_init_page: (bool) = False):
+    npage = 1 if user_data == None else user_data
 
+    print(f"{Fore.CYAN}[SEARCH] Searching images by text '{dpg.get_value('search')}', and page: {npage} (resolution: {mainResolution}) {Fore.RESET}")
+    if not is_init_page: 
+        page = site.getPageBySearch(dpg.get_value('search'), mainResolution, npage)
+    else:
+        page = wpm.Page(site.settings["main-url"] + f"all/page{npage}", site.settings)
+    imgs: list[wpm.Image] = page.loadImages()
+    print(f"{Fore.CYAN}[SEARCH] Serached images ({len(imgs)}) by {site.lastQuery} {Fore.RESET}")
+    regimgs = registrate_images(imgs)
+    print(f"{Fore.CYAN}[SEARCH] Registrated new images, showing page {Fore.RESET}")
+
+    show_page(regimgs, npage, page.getMaxPagesCurrCat())
+
+def page_decr(sender, keyword, user_data: tuple[int, int, bool]):
+    page = user_data[0]
+    if page >= 1:
+        page -= 1
+    search_callback(0, 0, page, user_data[2])
+    print(f"{Fore.LIGHTGREEN_EX}[INFO] Page decrimented {Fore.RESET}")
+
+def page_incr(sender, keyword, user_data: tuple[int, int, bool]):
+    page = user_data[0]
+    if page < user_data[1]:
+        page += 1
+    search_callback(0, 0, page, user_data[2])
+    print(f"{Fore.LIGHTGREEN_EX}[INFO] Page incremented {Fore.RESET}")
+
+def page_max(sender, keyword, user_data: tuple[int, int, bool]):
+    search_callback(0, 0, user_data[1], user_data[2])
+    print(f"{Fore.LIGHTGREEN_EX}[INFO] Page setted to max page {Fore.RESET}")
+
+def page_min(sender, keyword, user_data: tuple[int, int, bool]):
+    search_callback(0, 0, user_data[1], user_data[2])
+    print(f"{Fore.LIGHTGREEN_EX}[INFO] Page setted to min page {Fore.RESET}")
+
+def show_page(regimgs: list[tuple[wpm.Image, int]], currentPage: int, maxPages: int):
+    print(f"{Fore.YELLOW}[PAGE] Entered page, current page num: {currentPage}, maximum: {maxPages} {Fore.RESET}")
     if dpg.does_item_exist("$imgsTable"):
         dpg.delete_item("$imgsTable")
+
+    if dpg.does_item_exist("$scrollTable"):
+        dpg.delete_item("$scrollTable")
 
     # Удаление контейнера таблицы, если он существует
     if dpg.does_item_exist("$imgsTableContainer"):
         dpg.delete_item("$imgsTableContainer")
-
+    print(f"{Fore.YELLOW}[PAGE] Deleted all tables {Fore.RESET}")
     # Пересоздание контейнера и таблицы внутри окна
     if dpg.does_item_exist("$mainWindow"):
         with dpg.child_window(parent="$mainWindow", tag="$imgsTableContainer"):
@@ -183,22 +232,18 @@ def search_callback(sender, keyword, user_data):
                                     tag=f"imgbuttonprev{regimgs[index][1]}"
                                 )
                                 index += 1
+                print(f"{Fore.YELLOW}[PAGE] showed all button-images {Fore.RESET}")
 
-def registrate_images(imgs: list[wpm.Image]) -> list[tuple[wpm.Image, int]]:
-    unique_int: int = randint(0, 100000000)
-    regimgs: list[tuple[wpm.Image, int]] = [(img, unique_int + i) for i, img in enumerate(imgs)]
+            with dpg.table(tag="$scrollTable", header_row=False):
+                [dpg.add_table_column() for i in range(5)]
+                with dpg.table_row():
+                    dpg.add_button(label="1", user_data=(currentPage, maxPages, False), callback=page_min)
+                    dpg.add_button(label="<-", user_data=(currentPage, maxPages, False), callback=page_decr)
+                    dpg.add_text(default_value=f"{currentPage}")
+                    dpg.add_button(label="->", user_data=(currentPage, maxPages, False), callback=page_incr)
+                    dpg.add_button(label=f"{maxPages}", user_data=(currentPage, maxPages, False), callback=page_max)
 
-    for tp in regimgs:
-        registrate_image(tp[0], tp[1])
-    
-    return regimgs
-
-def show_images(regimgs: list[tuple[wpm.Image, int]]):
-    
-    def resolution_callback(sender, keyword, user_data):
-        global mainResolution
-        mainResolution = keyword
-    
+def first_page(regimgs: list[tuple[wpm.Image, int]], currentPage: int, maxPages: int):
     with dpg.window(tag="$mainWindow"):
         with dpg.menu_bar():
             with dpg.menu(label="Settings"):
@@ -209,24 +254,48 @@ def show_images(regimgs: list[tuple[wpm.Image, int]]):
 
         dpg.add_input_text(hint = "Enter search text", tag="search")
         dpg.add_button(label="Search", callback=search_callback)
+        
+        with dpg.table(tag="$imgsTable", header_row=False):
+            columns, rows = 3, len(regimgs) // 3 + (len(regimgs) % 3 > 0)
+            [dpg.add_table_column() for _ in range(columns)]
 
-        with dpg.table(tag ="$imgsTable", header_row=False):
-            columns, rows = 3, len(regimgs) // 3
-            [dpg.add_table_column() for i in range(columns)]
-
-            index: int = 0
-            for i in range(0, rows):
+            index = 0
+            for i in range(rows):
                 with dpg.table_row():
-                    for j in range(0, columns):
-                        img = regimgs[index][0]
-                        dpg.add_image_button(
-                            texture_tag = f'prev{regimgs[index][1]}',
-                            label = ', '.join(img.tags),
-                            callback = img_callback,
-                            user_data = regimgs[index],
-                            tag=f"imgbuttonprev{regimgs[index][1]}"
-                        )
-                        index += 1
+                    for j in range(columns):
+                        if index < len(regimgs):
+                            img = regimgs[index][0]
+                            dpg.add_image_button(
+                                texture_tag=f'prev{regimgs[index][1]}',
+                                label=', '.join(img.tags),
+                                callback=img_callback,
+                                user_data=regimgs[index],
+                                tag=f"imgbuttonprev{regimgs[index][1]}"
+                            )
+                            index += 1
+
+        with dpg.table(tag="$scrollTable", header_row=False):
+            [dpg.add_table_column() for i in range(5)]
+            with dpg.table_row():
+                dpg.add_button(label="1", user_data=(currentPage, maxPages, True), callback=page_min)
+                dpg.add_button(label="<-", user_data=(currentPage, maxPages, True), callback=page_decr)
+                dpg.add_text(default_value=f"{currentPage}")
+                dpg.add_button(label="->", user_data=(currentPage, maxPages, True), callback=page_incr)
+                dpg.add_button(label=f"{maxPages}", user_data=(currentPage, maxPages, True), callback=page_max)
+
+def registrate_images(imgs: list[wpm.Image]) -> list[tuple[wpm.Image, int]]:
+    unique_int: int = randint(0, 100000000)
+    regimgs: list[tuple[wpm.Image, int]] = [(img, unique_int + i) for i, img in enumerate(imgs)]
+
+    for tp in regimgs:
+        registrate_image(tp[0], tp[1])
+    
+    return regimgs
+
+def resolution_callback(sender, keyword, user_data):
+    global mainResolution
+    mainResolution = keyword        
+        
 
 if __name__ == '__main__':
     
@@ -237,10 +306,13 @@ if __name__ == '__main__':
 
     site = wpm.Site(settings)
     dpg.create_context()
-    load_font()
+    load_font()        
 
+    print(f"{Fore.GREEN}[INIT] Getting default images {Fore.RESET}")
     regimgs = registrate_images(site.getDefaultImages())
-    show_images(regimgs)
+    print(f"{Fore.GREEN}[INIT] Registrated default images ({len(regimgs)}) {Fore.RESET}")
+    first_page(regimgs, 1, site.mainPage.getMaxPagesCurrCat())
+    print(f"{Fore.LIGHTGREEN_EX}[INFO] First page displayed {Fore.RESET}")
 
     dpg.create_viewport(title='Online wallpapers', clear_color = [200, 200, 200, 255])
     dpg.setup_dearpygui()
