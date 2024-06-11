@@ -2,6 +2,7 @@ from PIL import Image as PILImage
 from src.downloader.utils import *
 from typing import cast, List
 import io
+import os
 
 class Image:
     def __init__(self, tags: list[str], prev_url: str, main_url: str, resolution: tuple[int, int], preview_resolution: tuple[int, int]):
@@ -22,6 +23,8 @@ class Image:
             image.save(path)
         else:
             raise Exception(f"Failed to download image from {url}")
+        
+        return os.path.basename(url)
     
     def data(self, type: str = 'main') -> list[tuple[int, int, int, int]]:
         data: list[tuple[int, int, int, int]] = []
